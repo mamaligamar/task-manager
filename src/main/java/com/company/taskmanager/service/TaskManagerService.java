@@ -1,9 +1,11 @@
 package com.company.taskmanager.service;
 
+import com.company.taskmanager.exception.TaskManagerException;
 import com.company.taskmanager.model.PriorityType;
 import com.company.taskmanager.model.Process;
 import com.company.taskmanager.model.SortingType;
 import java.util.List;
+import java.util.Optional;
 
 public interface TaskManagerService {
   /**
@@ -13,14 +15,14 @@ public interface TaskManagerService {
    * @param priority {@link PriorityType} the priority of the process that will be added.
    * @throws IndexOutOfBoundsException
    */
-  public void add(PriorityType priority);
+  public Process add(PriorityType priority) throws TaskManagerException;
   /**
    * Add a process - accepts all new processes killing and removing from the TM list the oldest one
    * (First-In, First-Out) when the max size is reached.
    *
    * @param priority {@link PriorityType} the priority of the process that will be added.
    */
-  public void addToFifo(PriorityType priority);
+  public Process addToFifo(PriorityType priority);
 
   /**
    * Adds a process – If the max size is reached it is evaluated if the new process passed in the
@@ -29,7 +31,7 @@ public interface TaskManagerService {
    *
    * @param priority {@link PriorityType} the priority of the process that will be added.
    */
-  public void addWithPriority(PriorityType priority);
+  public Process addWithPriority(PriorityType priority);
 
   /**
    * List running processes sorting them by time of creation (implicitly we can consider it the time

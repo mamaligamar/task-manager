@@ -1,5 +1,8 @@
 package com.company.taskmanager.service.impl;
 
+import com.company.taskmanager.exception.TaskManagerException;
+import com.company.taskmanager.exception.TaskManagerExternalException;
+import com.company.taskmanager.exception.TaskManagerInternalException;
 import com.company.taskmanager.model.SortingType;
 import com.company.taskmanager.model.PriorityType;
 import com.company.taskmanager.model.Process;
@@ -10,8 +13,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Vector;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -23,44 +28,47 @@ public class TaskManagerServiceImpl implements TaskManagerService {
 
   //TODO Refactor to allow parallel execution
   static {
-    tasks = new Vector<>(FIXED_CAPACITY);
+    tasks = new CopyOnWriteArrayList<>();
   }
 
   public TaskManagerServiceImpl() {
   }
 
-  public void add(PriorityType priority) throws IndexOutOfBoundsException {
+  public Process add(PriorityType priority) throws TaskManagerException {
     Objects.requireNonNull(priority);
     if (tasks.size() == FIXED_CAPACITY) {
-      log.error("This element will not be processed [capacity={}]", tasks.size());
-      throw new IndexOutOfBoundsException("No more capacity in task manager");
+      TaskManagerException taskManagerException = new TaskManagerException(TaskManagerExternalException.INTERNAL_ERROR,
+          TaskManagerInternalException.MAX_CAPACITY_EXCEPTION);
+      log.error("Could not add a new process, max capacity reached [priority={},capacity={},exception={}]", priority, tasks.size(), taskManagerException);
+      throw taskManagerException;
+    } else {
+      Process newProcess = new Process(nextPid(), priority);
+      add(newProcess);
+      return newProcess;
     }
-    add(new Process(nextPid(), priority));
   }
 
-  public void addToFifo(PriorityType priority) {
+  public Process addToFifo(PriorityType priority) {
     Objects.requireNonNull(priority);
-    final Process newProcess = new Process(nextPid(), priority);
-    if (tasks.size() < FIXED_CAPACITY) {
-      add(newProcess);
-    } else {
+    if (tasks.size() == FIXED_CAPACITY) {
       log.warn("Maximum Task Manager capacity reached [capacity={}]", tasks.size());
-      log.info("Removing [element={}]", newProcess);
-      kill(tasks.get(0).getPid());
-      add(newProcess);
+      // The first element that entered in the list is the first one
+      Process processToKill = tasks.get(0);
+      kill(processToKill.getPid());
     }
+    final Process newProcess = new Process(nextPid(), priority);
+    add(newProcess);
+    return newProcess;
   }
 
-  public void addWithPriority(PriorityType priority) {
+  public Process addWithPriority(PriorityType priority) {
     Objects.requireNonNull(priority);
     final Process newProcess = new Process(nextPid(), priority);
 
-    if (tasks.size() < FIXED_CAPACITY) {
-      add(newProcess);
-    } else {
+    if (tasks.size() == FIXED_CAPACITY) {
       log.warn("Maximum Task Manager capacity reached [capacity={}]", tasks.size());
       AtomicBoolean added = new AtomicBoolean(false);
-      Collections.reverse(tasks); // TODO search for a queue??
+
       tasks.forEach(currentElement -> {
         boolean isLowerPriority = newProcess.getPriority().getPrecedence() > currentElement.getPriority().getPrecedence();
         if (isLowerPriority && !added.get()) {
@@ -69,7 +77,15 @@ public class TaskManagerServiceImpl implements TaskManagerService {
           add(newProcess);
         }
       });
+      if(added.get()==true) {
+        return newProcess;
+      }
+    } else if(tasks.size() < FIXED_CAPACITY){
+      add(newProcess);
+      return newProcess;
     }
+
+    return null;
   }
 
   public List<Process> listAll(SortingType type) {
@@ -78,6 +94,7 @@ public class TaskManagerServiceImpl implements TaskManagerService {
 
     if (SortingType.PRIORITY == type) {
       tasks.sort(Comparator.comparing(process -> process.getPriority().getPrecedence()));
+      Collections.reverse(tasks);
     }
 
     if (SortingType.ID == type) {
@@ -112,7 +129,7 @@ public class TaskManagerServiceImpl implements TaskManagerService {
   }
 
   public void killAll() {
-    log.info("Killing all the exsiting processes: " + tasks);
+    log.info("Killing all the existing processes: " + tasks);
     tasks.forEach(process -> process.stop());
     tasks.clear();
   }

@@ -1,5 +1,6 @@
 package com.company.taskmanager;
 
+import com.company.taskmanager.exception.TaskManagerException;
 import com.company.taskmanager.model.SortingType;
 import com.company.taskmanager.model.PriorityType;
 import com.company.taskmanager.model.Process;
@@ -12,7 +13,7 @@ public class TaskManagerApplication {
   private static final TaskManagerServiceImpl taskqueue = new TaskManagerServiceImpl();
   private static boolean keepRunning = true;
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws TaskManagerException {
     System.out.println("Starting the application ...");
 
     while (keepRunning) {
@@ -38,7 +39,7 @@ public class TaskManagerApplication {
     }
   }
 
-  private static void manageAddOperation(Scanner scanner) {
+  private static void manageAddOperation(Scanner scanner) throws TaskManagerException {
     System.out.println("Add version:");
     System.out.println("1 - regular");
     System.out.println("2 - fifo");
@@ -51,15 +52,17 @@ public class TaskManagerApplication {
     Integer processPriority = scanner.nextInt();
     PriorityType priorityType = getPriorityType(processPriority);
 
+    Process addedProcess;
     if (addVersion == 1) {
-      taskqueue.add(priorityType);
+      addedProcess  = taskqueue.add(priorityType);
     } else if (addVersion == 2) {
-      taskqueue.addToFifo(priorityType);
+      addedProcess  = taskqueue.addToFifo(priorityType);
     } else if (addVersion == 3) {
-      taskqueue.addWithPriority(priorityType);
+      addedProcess  = taskqueue.addWithPriority(priorityType);
     } else {
       throw new UnsupportedOperationException("The specified add version is not supported");
     }
+    System.out.println("Added process: "+addedProcess);
   }
 
   private static void manageListOperation(Scanner scanner) {

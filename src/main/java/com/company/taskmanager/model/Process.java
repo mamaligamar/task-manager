@@ -1,6 +1,7 @@
 package com.company.taskmanager.model;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +22,7 @@ public class Process implements Runnable{
   }
 
   public void start() {
-    this.thread = new Thread();
+    this.thread = new Thread(this);
     this.thread.start();
   }
 
@@ -30,15 +31,19 @@ public class Process implements Runnable{
     this.thread.interrupt();
   }
 
+  public boolean isRunning(){
+    return this.isRunning.get();
+  }
+
   @Override
   public void run() {
-    isRunning.set(true);
+    this.isRunning.set(true);
     log.info("Running process [pid={}]", this.pid);
-    while (isRunning.get()) {
+    while (this.isRunning.get()) {
       try {
         Thread.sleep(5000);
       } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
+        //Thread.currentThread().interrupt();
         log.error("Thread execution interrupted [pid={}]", this.pid);
         e.printStackTrace();
       }
