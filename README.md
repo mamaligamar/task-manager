@@ -1,9 +1,8 @@
-# IptiQ Challenge
+# Task Manager
 1. [Requirements](#requirements)
 2. [Technology choices](#technology-choices)
 3. [Implementation decisions](#implementation-decisions)
-4. [Technical debt](#technical-debt)
-5. [How to run the application](#how-to-run-the-application)
+4. [How to run the application](#how-to-run-the-application)
 
 ## Requirements
 Task Manager is a software component that is designed for handling multiple processes inside an operating system. 
@@ -38,15 +37,78 @@ The Task Manager must expose the following functionality:
   * killing all processes with a specific priority
   * killing all running processes
   
+## Technology choices
+- **Java** - Java v1.8 was selected as the preferred language as my work experience is based in the last 6 years in Java.
+- **Maven** - Maven was selected as a build automation tool.
+- Libraries:
+    - **Lombok** - was selected in order to avoid the boilerplate getters, setters and constructors code in the DTOs.
+    - **Junit** - Junit was selected as unit testing framework.
+    - **Awaitility** - Awaitility was selected to ease the unit testing with threads.
 
-Process implements java Runnable interface because the idea of a task manager is to run some code. The intention is to make possible to specify the code to run.
-Design decissions - several adds, one list
-As it is requested to fix the queue capacity at build time it was selected a capacity of 4 processes just for make it easier for you to test the program.
-Of course, in the real world this number dependes on the cores of our hardware.
-The process lifetime was determined in build time too and its 2 minutes (2 minutes of sleeping), for the same reason, make it possible to run and test.
-In the real world we would execute real tasks and the Process will execute the according code but not sleep.
+## Implementation decisions
+### Exceptions
+**TaskManagerException** is the application business exception which is composed by two pieces:
+* The *external exception* which contains the app code and message that would be sent outside the task manager. 
+  This app code and message will allow us to hide/mask sensitive information in productive applications.
+* The *internal exception* which contains an internal debug code which is useful mostly for developers.
 
-If we want to run actual tasks we will need to enable a new callable parameter to the process in order to enable to add the code we want
-to run in that process.
+### Data model
+The data model of the application consists of the following elements:
+- PriorityType - Is an enum which contains all the available processes priorities. 
+- Process - Is the class that represents a Process in the system and implements the java Runnable interface which requires to implement the run method.
+  Also, this class implements some basic methods as start and stop the worker thread that is executed inside.
+  The process lifetime is indefinite until we kill the process. This decision was made in order to allow to test properly the application as the process in a real world
+  productive environment should accept a Callable parameter which will contain the code that should be executed by that process.
+- SortingType - Is an enum which contains all the possible ways to sort the list of processes inside the task manager.
 
-Why 8? How many processes may run in the machine
+### Service
+- TaskManagerService is the interface that exposes the available Task Manager operations.
+- TaskManagerServiceImpl contains the whole logic exposed in the requirements. The most notable implementation details of this class are the following:
+  * The maximum capacity of the Task Manager is determined in build time as required and it's 4. It's a so low number in order to allow running and test easily the whole functionality.
+    In a productive environment this number should be configured depending on the available cores in our hardware, also monitored and tuned in consequence.
+  * The queue of processes is represented by a Java *CopyOnWriteArrayList* which allows concurrent modifications in the task manager by making a fresh copy of the underlying array.
+  * The decission of using a list instead of a queue was becuase some of the operations need the insertion order of the elements, and java lists preserve that order.
+  * The process unique id is determined by a synchronized counter which is incremented each time we create a new process.
+  * Add operations: there are three different of them because each of them have a very different functionality 
+    regarding the processing of elements when the task manager maximum capacity is achieved. 
+    Each one of add methods create the process ids and that's why this methods return the process instead of void.
+  * List operations: one list operation sorts the processes inside the task manager depending on the sorting type specified by parameter.
+  * Kill operations: there are three different of them because each kill method has a very different functionality
+    regarding the processing of elements.
+    
+## Testing
+- **Unit tests** were implemented with **Junit** and **awaitility** for TaskManagerServiceImpl class which holds the logic of the application.
+- Another kind of tests, such as integration, contract or api test weren't implemented as the application does not have a database or communication with third parties.
+
+## Technical debt
+- Provide a log4j2.xml file in order to determine a format for our logs, rotation strategy and a retention policy.
+- Test the algorighm accessing the service in parallel from different threads.
+- Obtain more details about business requirements and improve the implementation.
+- Provide a proper UI instead of the command line.
+- Make Process class to run provided code/task by parameter.
+
+## How to run the application
+For running the application it's required a git and java installation.
+
+You can clone and run the application following the next steps from a **command line**:
+1. Clone the project from github:
+    ```
+    git clone https://github.com/mamaligamar/task-manager.git
+    ```
+
+2. Now go inside */task-manager* folder and execute the *task-manager.jar* (last generated jar for this app):
+    ```
+    java -cp task-manager.jar com.company.taskmanager.TaskManagerApplication
+    ```
+   Then the application will guide through the console output and will present you the available operations.
+
+   You can also specify the whole path to the jar from another directory in order to execute the application.
+
+3. If you prefer to rebuild the jar, execute inside */task-manager* folder:
+    ```
+    mvn clean install
+    ```
+   Then go to */task-manager/target* folder and repeat the step 2 of this section.
+
+
+-- Logback
