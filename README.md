@@ -73,7 +73,7 @@ The data model of the application consists of the following elements:
   * **Add operations**: there are *three* different of them because each of them has a very different functionality 
     regarding the processing of elements when the task manager maximum capacity is achieved. 
     Each one of the add methods creates the process id and that's why these three methods return the **Process** instead of void.
-  * **List operations**: *one* list *operation* sorts the processes inside the task manager depending on the sorting type specified by parameter.
+  * **List operations**: *one* list *operation* sorts the processes inside the task manager depending on the sorting type specified by parameter. The list by priority operation shows the processes in ascendant order.
   * **Kill operations**: there are *three* different of them because each kill method has a very different functionality
     regarding the processing of elements.
     

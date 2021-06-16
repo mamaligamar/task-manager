@@ -7,26 +7,23 @@ import com.company.taskmanager.model.SortingType;
 import com.company.taskmanager.model.PriorityType;
 import com.company.taskmanager.model.Process;
 import com.company.taskmanager.service.TaskManagerService;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Vector;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 public class TaskManagerServiceImpl implements TaskManagerService {
+  private static Logger log = LoggerFactory.getLogger(TaskManagerServiceImpl.class);
 
   private static final int FIXED_CAPACITY = 4;
   private final static List<Process> tasks;
   private static long pidSeqNumber = 0;
 
-  //TODO Refactor to allow parallel execution
   static {
     tasks = new CopyOnWriteArrayList<>();
   }
@@ -37,14 +34,13 @@ public class TaskManagerServiceImpl implements TaskManagerService {
   public Process add(PriorityType priority) throws TaskManagerException {
     Objects.requireNonNull(priority);
     if (tasks.size() == FIXED_CAPACITY) {
-      TaskManagerException taskManagerException = new TaskManagerException(TaskManagerExternalException.INTERNAL_ERROR,
-          TaskManagerInternalException.MAX_CAPACITY_EXCEPTION);
-      log.error("Could not add a new process, max capacity reached [priority={},capacity={},exception={}]", priority, tasks.size(), taskManagerException);
+      TaskManagerException taskManagerException = new TaskManagerException(
+          TaskManagerExternalException.INTERNAL_ERROR, TaskManagerInternalException.MAX_CAPACITY_EXCEPTION);
+      log.error("Could not add a new process, max capacity reached [priority={},capacity={},exception={}]",
+          priority, tasks.size(), taskManagerException.toString());
       throw taskManagerException;
     } else {
-      Process newProcess = new Process(nextPid(), priority);
-      add(newProcess);
-      return newProcess;
+      return add(new Process(nextPid(), priority));
     }
   }
 
@@ -52,13 +48,10 @@ public class TaskManagerServiceImpl implements TaskManagerService {
     Objects.requireNonNull(priority);
     if (tasks.size() == FIXED_CAPACITY) {
       log.warn("Maximum Task Manager capacity reached [capacity={}]", tasks.size());
-      // The first element that entered in the list is the first one
-      Process processToKill = tasks.get(0);
-      kill(processToKill.getPid());
+      // The first element that entered the list is the first one
+      kill(tasks.get(0).getPid());
     }
-    final Process newProcess = new Process(nextPid(), priority);
-    add(newProcess);
-    return newProcess;
+    return add(new Process(nextPid(), priority));
   }
 
   public Process addWithPriority(PriorityType priority) {
@@ -69,20 +62,20 @@ public class TaskManagerServiceImpl implements TaskManagerService {
       log.warn("Maximum Task Manager capacity reached [capacity={}]", tasks.size());
       AtomicBoolean added = new AtomicBoolean(false);
 
-      tasks.forEach(currentElement -> {
-        boolean isLowerPriority = newProcess.getPriority().getPrecedence() > currentElement.getPriority().getPrecedence();
-        if (isLowerPriority && !added.get()) {
-          kill(currentElement.getPid());
+      tasks.forEach(process -> {
+        boolean existsAnyLowerPriority = newProcess.getPriority().getPrecedence() > process.getPriority().getPrecedence();
+
+        if (existsAnyLowerPriority && !added.get()) {
+          kill(process.getPid());
           added.set(true);
-          add(newProcess);
         }
       });
-      if(added.get()==true) {
-        return newProcess;
+
+      if (added.get() == true) {
+        return add(newProcess);
       }
-    } else if(tasks.size() < FIXED_CAPACITY){
-      add(newProcess);
-      return newProcess;
+    } else if (tasks.size() < FIXED_CAPACITY) {
+      return add(newProcess);
     }
 
     return null;
@@ -94,10 +87,7 @@ public class TaskManagerServiceImpl implements TaskManagerService {
 
     if (SortingType.PRIORITY == type) {
       tasks.sort(Comparator.comparing(process -> process.getPriority().getPrecedence()));
-      Collections.reverse(tasks);
-    }
-
-    if (SortingType.ID == type) {
+    } else if(SortingType.ID == type) {
       tasks.sort(Comparator.comparing(Process::getPid));
     }
 
@@ -113,19 +103,21 @@ public class TaskManagerServiceImpl implements TaskManagerService {
       processToKill.get().stop();
       tasks.remove(processToKill.get());
     } else {
-      log.warn("Nothing will be removed, the specified process does not exist [pid={}]", pid);
+      log.warn("Unable to kill, process not found [pid={}]", pid);
     }
   }
 
   public void killAll(PriorityType priority) {
     Objects.requireNonNull(priority);
     log.info("Kill processes with priority " + priority);
-    List<Process> processList = tasks.stream()
+
+    List<Process> processToKillList = tasks.stream()
         .filter(process -> priority.getPrecedence() == process.getPriority().getPrecedence())
         .collect(Collectors.toList());
-    log.info("Processes to be killed: " + processList);
-    processList.forEach(process -> process.stop());
-    tasks.removeAll(processList);
+
+    log.info("Processes to be killed: " + processToKillList);
+    processToKillList.forEach(process -> process.stop());
+    tasks.removeAll(processToKillList);
   }
 
   public void killAll() {
@@ -138,8 +130,9 @@ public class TaskManagerServiceImpl implements TaskManagerService {
     return ++pidSeqNumber;
   }
 
-  private void add(Process newProcess) {
+  private Process add(Process newProcess) {
     tasks.add(newProcess);
     newProcess.start();
+    return newProcess;
   }
 }

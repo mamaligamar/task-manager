@@ -10,16 +10,11 @@ import com.company.taskmanager.model.SortingType;
 import java.util.List;
 import org.awaitility.Durations;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 public class TaskManagerServiceImplTest {
 
   private static final TaskManagerServiceImpl underTest = new TaskManagerServiceImpl();
-
-  @Before
-  public void setUp() {
-  }
 
   @After
   public void tearDown() {
@@ -46,12 +41,13 @@ public class TaskManagerServiceImplTest {
 
   @Test
   public void add() throws TaskManagerException {
+    // When added
     Process process = underTest.add(PriorityType.HIGH);
-    await().atMost(Durations.ONE_MINUTE).until(() -> process.isRunning());
+    await().atMost(Durations.ONE_MINUTE).until(process::isRunning);
 
+    // Then the task manager contains the added process and it is running
     List<Process> processes = underTest.listAll(SortingType.CREATION_TIME);
-
-    assertTrue(processes.size() == 1);
+    assertEquals(1, processes.size());
     assertEquals(processes.get(0).getPid(), process.getPid());
     assertEquals(processes.get(0).getPriority(), process.getPriority());
     assertTrue(process.isRunning());
@@ -64,11 +60,12 @@ public class TaskManagerServiceImplTest {
 
   @Test
   public void addToFifo() {
+    // When added
     Process process = underTest.addToFifo(PriorityType.HIGH);
-    await().atMost(Durations.ONE_MINUTE).until(() -> process.isRunning());
+    await().atMost(Durations.ONE_MINUTE).until(process::isRunning);
 
+    // Then the task manager contains the added process and it is running
     List<Process> processes = underTest.listAll(SortingType.CREATION_TIME);
-
     assertEquals(processes.get(0).getPid(), process.getPid());
     assertEquals(processes.get(0).getPriority(), process.getPriority());
     assertTrue(process.isRunning());
@@ -87,17 +84,15 @@ public class TaskManagerServiceImplTest {
     Process processToBeRemoved = processes.get(0);
     assertTrue(processToBeRemoved.isRunning());
 
-    // When add to fifo at max capacity is executed the last element will be removed and the new one
-    // added
+    // When add to fifo at max capacity
     Process resultProcess = underTest.addToFifo(PriorityType.LOW);
-    await().atMost(Durations.ONE_MINUTE).until(() -> resultProcess.isRunning());
+    await().atMost(Durations.ONE_MINUTE).until(resultProcess::isRunning);
 
-    //ensu
+    // Then the last element will be removed and the new one will be added
     List<Process> newProcesses = underTest.listAll(SortingType.CREATION_TIME);
     assertFalse(newProcesses.contains(processToBeRemoved));
     assertFalse(processToBeRemoved.isRunning());
-
-    assertTrue(processes.size() == 4);
+    assertEquals(4, processes.size());
     // The new element is added as the last element of the list
     assertEquals(processes.get(processes.size() - 1).getPid(), resultProcess.getPid());
     assertEquals(processes.get(processes.size() - 1).getPriority(), resultProcess.getPriority());
@@ -112,11 +107,13 @@ public class TaskManagerServiceImplTest {
 
   @Test
   public void addWithPriority() {
+    // When added
     Process process = underTest.addWithPriority(PriorityType.HIGH);
-    await().atMost(Durations.ONE_MINUTE).until(() -> process.isRunning());
+    await().atMost(Durations.ONE_MINUTE).until(process::isRunning);
 
     List<Process> processes = underTest.listAll(SortingType.CREATION_TIME);
 
+    // Then the task manager contains the added process and it is running
     assertEquals(processes.get(0).getPid(), process.getPid());
     assertEquals(processes.get(0).getPriority(), process.getPriority());
     assertTrue(process.isRunning());
@@ -131,21 +128,19 @@ public class TaskManagerServiceImplTest {
     underTest.addWithPriority(PriorityType.HIGH);
 
     List<Process> processes = underTest.listAll(SortingType.CREATION_TIME);
-    processes.contains(candidateToBeRemoved);
+    assertTrue(processes.contains(candidateToBeRemoved));
     assertTrue(candidateToBeRemoved.isRunning());
 
-    // The candidate to be removed is the oldest process that entered the task manager with lowest priority
-    // When add to fifo at max capacity is executed the last element will be removed and the new one
-    // added
+    // When adding with priority
     Process resultProcess = underTest.addWithPriority(PriorityType.HIGH);
-    await().atMost(Durations.ONE_MINUTE).until(() -> resultProcess.isRunning());
+    await().atMost(Durations.ONE_MINUTE).until(resultProcess::isRunning);
 
+    // The candidate to be removed is the oldest process that entered the task manager with lowest priority
     List<Process> newProcesses = underTest.listAll(SortingType.CREATION_TIME);
     assertFalse(newProcesses.contains(candidateToBeRemoved));
     assertFalse(candidateToBeRemoved.isRunning());
 
-    assertTrue(processes.size() == 4);
-    // The new element is added as the last element of the list
+    assertEquals(4, processes.size());
     assertEquals(processes.get(processes.size() - 1).getPid(), resultProcess.getPid());
     assertEquals(processes.get(processes.size() - 1).getPriority(), resultProcess.getPriority());
     assertTrue(resultProcess.isRunning());
@@ -160,15 +155,13 @@ public class TaskManagerServiceImplTest {
     underTest.addWithPriority(PriorityType.HIGH);
     List<Process> oldProcesses = underTest.listAll(SortingType.CREATION_TIME);
 
-    // The candidate to be removed is the oldest process that entered the task manager with lowest priority
-    // When add to fifo at max capacity is executed the last element will be removed and the new one
-    // added
+    // When adding with priority and no candidate that can be removed
     Process resultProcess = underTest.addWithPriority(PriorityType.HIGH);
 
+    // The tasks manager will remain in the same state
     List<Process> newProcesses = underTest.listAll(SortingType.CREATION_TIME);
-    assertTrue(newProcesses.size() == 4);
+    assertEquals(4, newProcesses.size());
     assertNull(resultProcess);
-
     assertArrayEquals(oldProcesses.toArray(), newProcesses.toArray());
   }
 
@@ -180,42 +173,57 @@ public class TaskManagerServiceImplTest {
 
   @Test
   public void listAllEmptyTaskManagerReturnsAnEmptyList() {
+    // When
     List<Process> processes = underTest.listAll(SortingType.CREATION_TIME);
-    assertTrue(processes.size() == 0);
+
+    // Then
+    assertEquals(0, processes.size());
   }
 
   @Test
   public void listAllByCreationTimeReturnsTheSameList() throws TaskManagerException {
+    // Given
     Process firstElement = underTest.add(PriorityType.HIGH);
     Process secondElement = underTest.add(PriorityType.MEDIUM);
 
+    // When
     List<Process> processes = underTest.listAll(SortingType.CREATION_TIME);
-    assertTrue(processes.size() == 2);
+
+    // Them
+    assertEquals(2, processes.size());
     assertEquals(firstElement, processes.get(0));
     assertEquals(secondElement, processes.get(1));
   }
 
   @Test
   public void listAllByPriority() throws TaskManagerException {
+    //Given
     Process firstElement = underTest.add(PriorityType.LOW);
     Process secondElement = underTest.add(PriorityType.HIGH);
     Process thirdElement = underTest.add(PriorityType.MEDIUM);
 
+    // When
     List<Process> processes = underTest.listAll(SortingType.PRIORITY);
-    assertTrue(processes.size() == 3);
-    assertEquals(secondElement, processes.get(0));
+
+    // Then
+    assertEquals(3, processes.size());
+    assertEquals(firstElement, processes.get(0));
     assertEquals(thirdElement, processes.get(1));
-    assertEquals(firstElement, processes.get(2));
+    assertEquals(secondElement, processes.get(2));
   }
 
   @Test
   public void listAllById() throws TaskManagerException {
+    // Given
     underTest.add(PriorityType.LOW);
     underTest.add(PriorityType.HIGH);
     underTest.add(PriorityType.MEDIUM);
 
+    // When
     List<Process> processes = underTest.listAll(SortingType.ID);
-    assertTrue(processes.size() == 3);
+
+    // Then
+    assertEquals(3, processes.size());
     assertTrue((int) processes.get(0).getPid() < (int) processes.get(1).getPid());
     assertTrue((int) processes.get(1).getPid() < (int) processes.get(2).getPid());
   }
@@ -226,21 +234,21 @@ public class TaskManagerServiceImplTest {
   }
 
   @Test
-  public void killPid() throws TaskManagerException, InterruptedException {
+  public void killPid() throws TaskManagerException {
     // Given one running process in the task manager
     Process process = underTest.add(PriorityType.LOW);
-    await().atMost(Durations.ONE_MINUTE).until(() -> process.isRunning());
+    await().atMost(Durations.ONE_MINUTE).until(process::isRunning);
     assertTrue(process.isRunning());
 
     List<Process> processes = underTest.listAll(SortingType.CREATION_TIME);
-    assertTrue(processes.size() == 1);
+    assertEquals(1, processes.size());
 
     // When
     underTest.kill(process.getPid());
 
     // Then
     List<Process> newProcesses = underTest.listAll(SortingType.CREATION_TIME);
-    assertTrue(newProcesses.size() == 0);
+    assertEquals(0, newProcesses.size());
   }
 
   @Test(expected = NullPointerException.class)
@@ -250,25 +258,28 @@ public class TaskManagerServiceImplTest {
 
   @Test
   public void testKillAllWithPriority() throws TaskManagerException {
+    // Given three different processes with different priorities in the Task Manager
     Process firstProcess = underTest.add(PriorityType.LOW);
-    await().atMost(Durations.ONE_MINUTE).until(() -> firstProcess.isRunning());
+    await().atMost(Durations.ONE_MINUTE).until(firstProcess::isRunning);
     assertTrue(firstProcess.isRunning());
 
     Process secondProcess = underTest.add(PriorityType.HIGH);
-    await().atMost(Durations.ONE_MINUTE).until(() -> secondProcess.isRunning());
+    await().atMost(Durations.ONE_MINUTE).until(secondProcess::isRunning);
     assertTrue(secondProcess.isRunning());
 
     Process thirdProcess = underTest.add(PriorityType.HIGH);
-    await().atMost(Durations.ONE_MINUTE).until(() -> thirdProcess.isRunning());
+    await().atMost(Durations.ONE_MINUTE).until(thirdProcess::isRunning);
     assertTrue(thirdProcess.isRunning());
 
     List<Process> processes = underTest.listAll(SortingType.CREATION_TIME);
-    assertTrue(processes.size() == 3);
+    assertEquals(3, processes.size());
 
+    // When killing all of them by priority
     underTest.killAll(PriorityType.HIGH);
 
+    // Then one remains in the task manager
     List<Process> newProcesses = underTest.listAll(SortingType.CREATION_TIME);
-    assertTrue(newProcesses.size() == 1);
+    assertEquals(1, newProcesses.size());
     assertEquals(newProcesses.get(0), firstProcess);
     assertTrue(firstProcess.isRunning());
     assertFalse(secondProcess.isRunning());
@@ -277,25 +288,28 @@ public class TaskManagerServiceImplTest {
 
   @Test
   public void testKillAll() throws TaskManagerException {
+    // Given three different processes in the task manager
     Process firstProcess = underTest.add(PriorityType.LOW);
-    await().atMost(Durations.ONE_MINUTE).until(() -> firstProcess.isRunning());
+    await().atMost(Durations.ONE_MINUTE).until(firstProcess::isRunning);
     assertTrue(firstProcess.isRunning());
 
     Process secondProcess = underTest.add(PriorityType.HIGH);
-    await().atMost(Durations.ONE_MINUTE).until(() -> secondProcess.isRunning());
+    await().atMost(Durations.ONE_MINUTE).until(secondProcess::isRunning);
     assertTrue(secondProcess.isRunning());
 
     Process thirdProcess = underTest.add(PriorityType.HIGH);
-    await().atMost(Durations.ONE_MINUTE).until(() -> thirdProcess.isRunning());
+    await().atMost(Durations.ONE_MINUTE).until(thirdProcess::isRunning);
     assertTrue(thirdProcess.isRunning());
 
     List<Process> processes = underTest.listAll(SortingType.CREATION_TIME);
-    assertTrue(processes.size() == 3);
+    assertEquals(3, processes.size());
 
+    // When killing all of them
     underTest.killAll();
 
+    // Then the task manager is empty
     List<Process> newProcesses = underTest.listAll(SortingType.CREATION_TIME);
-    assertTrue(newProcesses.size() == 0);
+    assertEquals(0, newProcesses.size());
     assertFalse(firstProcess.isRunning());
     assertFalse(secondProcess.isRunning());
     assertFalse(thirdProcess.isRunning());
