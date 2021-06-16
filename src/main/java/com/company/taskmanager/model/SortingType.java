@@ -2,8 +2,10 @@ package com.company.taskmanager.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
 
+/**
+ * Contains available sorting types.
+ */
 @AllArgsConstructor
 @Getter
 public enum SortingType {
