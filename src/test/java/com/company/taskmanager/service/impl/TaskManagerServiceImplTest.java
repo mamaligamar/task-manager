@@ -66,6 +66,7 @@ public class TaskManagerServiceImplTest {
 
     // Then the task manager contains the added process and it is running
     List<Process> processes = underTest.listAll(SortingType.CREATION_TIME);
+    assertEquals(1, processes.size());
     assertEquals(processes.get(0).getPid(), process.getPid());
     assertEquals(processes.get(0).getPriority(), process.getPriority());
     assertTrue(process.isRunning());
@@ -111,9 +112,9 @@ public class TaskManagerServiceImplTest {
     Process process = underTest.addWithPriority(PriorityType.HIGH);
     await().atMost(Durations.ONE_MINUTE).until(process::isRunning);
 
-    List<Process> processes = underTest.listAll(SortingType.CREATION_TIME);
-
     // Then the task manager contains the added process and it is running
+    List<Process> processes = underTest.listAll(SortingType.CREATION_TIME);
+    assertEquals(1, processes.size());
     assertEquals(processes.get(0).getPid(), process.getPid());
     assertEquals(processes.get(0).getPriority(), process.getPriority());
     assertTrue(process.isRunning());
