@@ -7,7 +7,7 @@ import lombok.ToString;
 @Getter
 @NoArgsConstructor
 @ToString
-public class TaskManagerException extends Exception{
+public class TaskManagerException extends Exception {
 
   private String code;
   private TaskManagerInternalException innerException;
