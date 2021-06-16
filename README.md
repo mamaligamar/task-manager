@@ -100,7 +100,7 @@ After the installation of the previously mentioned tools you can clone and run t
 
 2. Now go inside */task-manager* folder and execute the *task-manager.jar* (last generated jar for this app):
     ```
-    java -cp task-manager-app.jar com.company.taskmanager.TaskManagerApplication
+    java -cp task-manager-app-jar-with-dependencies.jar com.company.taskmanager.TaskManagerApplication
     ```
    Then the application will guide you through the console output and will present you the available operations.
 
