@@ -111,3 +111,5 @@ After the installation of the previously mentioned tools you can clone and run t
     mvn clean install
     ```
    Then go to */task-manager/target* folder and repeat the step 2 of this section.
+
+You also can run the application from *IntelliJ* executing the *TaskManagerApplication* class.
